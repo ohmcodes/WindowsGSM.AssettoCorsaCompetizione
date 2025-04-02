@@ -1,8 +1,9 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Diagnostics;
 using System.Text;
 using System.Net;
+using System.Linq;
 using System.Threading.Tasks;
 using WindowsGSM.Functions;
 using WindowsGSM.GameServer.Engine;
@@ -28,14 +29,14 @@ namespace WindowsGSM.Plugins
         // - Standard Constructor and properties
         public AssettoCorsaCompetizione(ServerConfig serverData) : base(serverData) => base.serverData = _serverData = serverData;
         private readonly ServerConfig _serverData;
-        public string Error, Notice;
+        public new string Error, Notice;
 
         // - Settings properties for SteamCMD installer
         public override bool loginAnonymous => false;
         public override string AppId => "1430110"; /* taken via https://steamdb.info/app/1430110/info/ */
 
         // - Game server Fixed variables
-        public override string StartPath => "accServer.exe"; // Game server start path
+        public override string StartPath => "server/accServer.exe"; // Game server start path
         public string FullName = "Assetto Corsa Competizione Dedicated Server"; // Game server FullName
         public bool AllowsEmbedConsole = true;  // Does this server support output redirect?
         public int PortIncrements = 0; // This tells WindowsGSM how many ports should skip after installation
@@ -49,17 +50,9 @@ namespace WindowsGSM.Plugins
         public string QueryPort = "9601"; // WGSM reads this as string but originally it is number or int (SteamQueryPort)
         public string Additional = string.Empty;
 
-
-        private Dictionary<string, Dictionary<string, string>> configData;
-        string filePath = string.Empty;
-
         // - Create a default cfg for the game server after installation
         public async void CreateServerCFG()
         {
-            //WIP
-            //filePath = Path.Combine(ServerPath.GetServersServerFiles(_serverData.ServerID), "cfg", "settings.json");
-
-            //createConfigFile();
         }
 
         // - Start server function, return its Process to WindowsGSM
@@ -73,9 +66,6 @@ namespace WindowsGSM.Plugins
             }
 
             string param = string.Empty;
-
-            // Modify CFG before start
-            //createConfigFile();
 
             // Prepare Process
             var p = new Process
@@ -120,6 +110,8 @@ namespace WindowsGSM.Plugins
                 Error = e.Message;
                 return null; // return null if fail to start
             }
+
+            await Task.Delay(5);
         }
 
         // - Stop server function
@@ -134,14 +126,8 @@ namespace WindowsGSM.Plugins
         }
 
         // - Update server function
-        public async Task<Process> Update(bool validate = false, string custom = null)
+        public new async Task<Process> Update(bool validate = false, string custom = null)
         {
-            // old
-            //var (p, error) = await Installer.SteamCMD.UpdateEx(serverData.ServerID, AppId, validate, custom: custom, loginAnonymous: loginAnonymous);
-            //Error = error;
-            //await Task.Run(() => { p.WaitForExit(); });
-            //return p;
-
             // Prepare Process
             string param = Installer.SteamCMD.GetParameter(ServerPath.GetServersServerFiles(_serverData.ServerID), AppId, true, loginAnonymous, null, custom);
 
@@ -168,7 +154,7 @@ namespace WindowsGSM.Plugins
 
             // Fix the SteamCMD issue
             Directory.CreateDirectory(Path.Combine(ServerPath.GetServersServerFiles(_serverData.ServerID), "steamapps"));
-
+            await Task.Delay(5);
             //if (AllowsEmbedConsole)
             //{
                 //p.StartInfo.CreateNoWindow = false;
@@ -199,35 +185,33 @@ namespace WindowsGSM.Plugins
                 Error += e.Message + "\n";
                 return null; // return null if fail to start
             }
+
+            
         }
 
-        public bool IsInstallValid()
+        public new bool IsInstallValid()
         {
             return File.Exists(Functions.ServerPath.GetServersServerFiles(_serverData.ServerID, StartPath));
         }
 
-        public bool IsImportValid(string path)
+        public new bool IsImportValid(string path)
         {
             string exePath = Path.Combine(path, "PackageInfo.bin");
             Error = $"Invalid Path! Fail to find {Path.GetFileName(exePath)}";
             return File.Exists(exePath);
         }
 
-        public string GetLocalBuild()
+        public new string GetLocalBuild()
         {
             var steamCMD = new Installer.SteamCMD();
             return steamCMD.GetLocalBuild(_serverData.ServerID, AppId);
         }
 
-        public async Task<string> GetRemoteBuild()
+        public new async Task<string> GetRemoteBuild()
         {
             var steamCMD = new Installer.SteamCMD();
             return await steamCMD.GetRemoteBuild(AppId);
         }
 
-        private void createConfigFile()
-        {
-
-        }
     }
 }
